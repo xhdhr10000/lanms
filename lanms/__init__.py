@@ -1,13 +1,19 @@
-import numpy as np
-from .adaptor import merge_quadrangle_n9 as nms_impl
+import torch
+import os
+import platform
+
+if platform.system().lower() == 'darwin':
+    torch.ops.load_library(os.path.join(os.path.dirname(__file__), 'liblanms.dylib'))
+elif platform.system().lower() == 'linux':
+    torch.ops.load_library(os.path.join(os.path.dirname(__file__), 'liblanms.so'))
 
 
 def merge_quadrangle_n9(polys, thres=0.3, precision=10000):
     if len(polys) == 0:
-        return np.array([], dtype='float32')
-    p = polys.copy()
+        return torch.tensor([], dtype=torch.double)
+    p = polys.clone()
     p[:, :8] *= precision
-    ret = np.array(nms_impl(p, thres), dtype='float32')
+    ret = torch.ops.lanms.merge_quadrangle_n9(p, thres)
     ret[:, :8] /= precision
     return ret
 

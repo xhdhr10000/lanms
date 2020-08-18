@@ -12,6 +12,7 @@ import subprocess
 import setuptools
 from setuptools.dist import Distribution
 
+import torch
 
 # This is a hack around python wheels not including the adaptor.so library.
 class BinaryDistribution(Distribution):
@@ -21,26 +22,32 @@ class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
 
-
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+LIBTORCH_DIR = torch.utils.cmake_prefix_path
 
-if subprocess.call(['make', '--always-make','-C', BASE_DIR]) != 0:
-    raise RuntimeError('Cannot compile lanms in the directory: {}'.format(BASE_DIR))
+if not os.path.exists('build'): os.mkdir('build')
+os.chdir('build')
+if subprocess.call(['cmake', '-DCMAKE_PREFIX_PATH=%s' % LIBTORCH_DIR, BASE_DIR]) != 0:
+    raise RuntimeError('Cmake failed in directory: {}'.format(BASE_DIR))
+if subprocess.call(['make', '--always-make']) != 0:
+    raise RuntimeError('Make failed in directory: {}'.format(BASE_DIR))
+os.chdir(BASE_DIR)
 
 setuptools.setup(
-    name='lanms',
+    name='lanms-pytorch',
 
-    version='1.0.2',
+    version='1.0.3',
 
-    description='Locality-Aware Non-Maximum Suppression',
+    description='Locality-Aware Non-Maximum Suppression, as a custom C++ operator in TorchScript.',
 
     # The project's main homepage.
-    url='https://github.com/Parquery/lanms',
+    url='https://github.com/xhdhr10000/lanms',
 
     # Author details
     author='argmen (boostczc@gmail.com) is code author, '
-           'Dominik Walder (dominik.walder@parquery.com) and Marko Ristin (marko@parquery.com) only packaged the code',
-    author_email='devs@parquery.com',
+           'Dominik Walder (dominik.walder@parquery.com) and Marko Ristin (marko@parquery.com) only packaged the code, '
+           'xhdhr10000 (xhdhr2007@126.com) ported to TorchScript framework',
+    author_email='xhdhr2007@126.com',
 
     # Choose your license
     license='GNU General Public License v3.0',
@@ -61,7 +68,7 @@ setuptools.setup(
 
     packages=setuptools.find_packages(exclude=[]),
 
-    install_requires=["numpy"],
+    install_requires=["torch >= 1.6.0"],
 
     include_package_data=True,
     distclass=BinaryDistribution,

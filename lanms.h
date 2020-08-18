@@ -9,17 +9,17 @@ namespace lanms {
 
 	struct Polygon {
 		cl::Path poly;
-		float score;
+		double score;
 	};
 
-	float paths_area(const ClipperLib::Paths &ps) {
-		float area = 0;
+	double paths_area(const ClipperLib::Paths &ps) {
+		double area = 0;
 		for (auto &&p: ps)
 			area += cl::Area(p);
 		return area;
 	}
 
-	float poly_iou(const Polygon &a, const Polygon &b) {
+	double poly_iou(const Polygon &a, const Polygon &b) {
 		cl::Clipper clpr;
 		clpr.AddPath(a.poly, cl::ptSubject, true);
 		clpr.AddPath(b.poly, cl::ptClip, true);
@@ -30,10 +30,10 @@ namespace lanms {
 
 		auto inter_area = paths_area(inter),
 			 uni_area = paths_area(uni);
-		return std::abs(inter_area) / std::max(std::abs(uni_area), 1.0f);
+		return std::abs(inter_area) / std::max(std::abs(uni_area), 1.0);
 	}
 
-	bool should_merge(const Polygon &a, const Polygon &b, float iou_threshold) {
+	bool should_merge(const Polygon &a, const Polygon &b, double iou_threshold) {
 		return poly_iou(a, b) > iou_threshold;
 	}
 
@@ -143,7 +143,7 @@ namespace lanms {
 
 				auto &poly = p.poly;
 				poly.resize(4);
-				auto score_inv = 1.0f / std::max(1e-8f, score);
+				auto score_inv = 1.0 / std::max(1e-8, score);
 				poly[0].X = data[0] * score_inv;
 				poly[0].Y = data[1] * score_inv;
 				poly[1].X = data[2] * score_inv;
@@ -161,7 +161,7 @@ namespace lanms {
 
 		private:
 			std::int64_t data[8];
-			float score;
+			double score;
 			std::int32_t nr_polys;
 	};
 
@@ -169,7 +169,7 @@ namespace lanms {
 	/**
 	 * The standard NMS algorithm.
 	 */
-	std::vector<Polygon> standard_nms(std::vector<Polygon> &polys, float iou_threshold) {
+	std::vector<Polygon> standard_nms(std::vector<Polygon> &polys, double iou_threshold) {
 		size_t n = polys.size();
 		if (n == 0)
 			return {};
@@ -197,7 +197,7 @@ namespace lanms {
 	}
 
 	std::vector<Polygon>
-		merge_quadrangle_n9(const float *data, size_t n, float iou_threshold) {
+		merge_quadrangle_n9(const double *data, size_t n, double iou_threshold) {
 			using cInt = cl::cInt;
 
 			// first pass

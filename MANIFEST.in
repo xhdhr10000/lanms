@@ -2,12 +2,14 @@
 include LICENSE
 
 # Include the library file
-include lanms/adaptor.so
+include lanms/liblanms.so
+include lanms/liblanms.dylib
 
 # Include cpp source files and Makefile
 include adaptor.cpp
 include lanms.h
 include Makefile
+include CMakeLists.txt
 
 
 include include/clipper/clipper.hpp

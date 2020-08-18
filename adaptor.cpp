@@ -1,26 +1,20 @@
-#include "pybind11/pybind11.h"
-#include "pybind11/numpy.h"
-#include "pybind11/stl.h"
-#include "pybind11/stl_bind.h"
-
+#include <torch/script.h>
 #include "lanms.h"
-
-namespace py = pybind11;
-
 
 namespace lanms_adaptor {
 
-	std::vector<std::vector<float>> polys2floats(const std::vector<lanms::Polygon> &polys) {
-		std::vector<std::vector<float>> ret;
+	std::vector<std::array<double, 9>> polys2doubles(const std::vector<lanms::Polygon> &polys) {
+		std::vector<std::array<double, 9>> ret;
+		ret.reserve(polys.size());
 		for (size_t i = 0; i < polys.size(); i ++) {
 			auto &p = polys[i];
 			auto &poly = p.poly;
-			ret.emplace_back(std::vector<float>{
-					float(poly[0].X), float(poly[0].Y),
-					float(poly[1].X), float(poly[1].Y),
-					float(poly[2].X), float(poly[2].Y),
-					float(poly[3].X), float(poly[3].Y),
-					float(p.score),
+			ret.push_back({
+					double(poly[0].X), double(poly[0].Y),
+					double(poly[1].X), double(poly[1].Y),
+					double(poly[2].X), double(poly[2].Y),
+					double(poly[3].X), double(poly[3].Y),
+					double(p.score),
 					});
 		}
 
@@ -37,25 +31,19 @@ namespace lanms_adaptor {
 	 *
 	 * \return an n-by-9 numpy array, the merged quadrangles
 	 */
-	std::vector<std::vector<float>> merge_quadrangle_n9(
-			py::array_t<float, py::array::c_style | py::array::forcecast> quad_n9,
-			float iou_threshold) {
-		auto pbuf = quad_n9.request();
-		if (pbuf.ndim != 2 || pbuf.shape[1] != 9)
+	torch::Tensor merge_quadrangle_n9(torch::Tensor quad_n9, double iou_threshold) {
+		const auto &shape = quad_n9.sizes();
+		if (shape.size() != 2 || shape[1] != 9)
 			throw std::runtime_error("quadrangles must have a shape of (n, 9)");
-		auto n = pbuf.shape[0];
-		auto ptr = static_cast<float *>(pbuf.ptr);
-		return polys2floats(lanms::merge_quadrangle_n9(ptr, n, iou_threshold));
+		auto n = shape[0];
+		auto ptr = quad_n9.data_ptr<double>();
+		auto polys = polys2doubles(lanms::merge_quadrangle_n9(ptr, n, iou_threshold));
+		return torch::from_blob(polys.data(), { static_cast<int>(polys.size()), 9 }, at::kDouble).clone();
 	}
 
 }
 
-PYBIND11_PLUGIN(adaptor) {
-	py::module m("adaptor", "NMS");
-
-	m.def("merge_quadrangle_n9", &lanms_adaptor::merge_quadrangle_n9,
-			"merge quadrangels");
-
-	return m.ptr();
+TORCH_LIBRARY(lanms, m) {
+	m.def("merge_quadrangle_n9", lanms_adaptor::merge_quadrangle_n9);
 }
 

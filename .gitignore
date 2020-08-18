@@ -1,7 +1,12 @@
-lanms/adaptor.so
 __pycache__
 build
 lanms.egg-info
+lanms_pytorch.egg-info
 .idea
 venv3
 dist
+.vscode/
+venv/
+*.patch
+*.so
+*.dylib
