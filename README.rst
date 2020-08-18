@@ -26,4 +26,4 @@ Installation
 
 .. code-block:: bash
 
-    pip3 install lanms
+    pip3 install lanms-pytorch
